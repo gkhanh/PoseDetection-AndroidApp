@@ -21,6 +21,7 @@
     <color name="mp_color_secondary">#FBBC04</color>
     <color name="mp_color_secondary_variant">#F9AB00</color>
     <color name="mp_color_error">#B00020</color>
+    <color name="text_display">#e00d85</color>
     <color name="toolbar_background">#E0E0E0</color>
     <color name="ic_launcher_background">#FFFFFF</color>
     <color name="bottom_sheet_background">#EEEEEE</color>
@@ -28,4 +29,9 @@
     <color name="icActive">#FFFFFFFF</color>
     <color name="icFocused">#DDFFFFFF</color>
     <color name="icPressed">#AAFFFFFF</color>
+    <color name="light_blue_600">#FF039BE5</color>
+    <color name="light_blue_900">#FF01579B</color>
+    <color name="light_blue_A200">#FF40C4FF</color>
+    <color name="light_blue_A400">#FF00B0FF</color>
+    <color name="black_overlay">#66000000</color>
 </resources>

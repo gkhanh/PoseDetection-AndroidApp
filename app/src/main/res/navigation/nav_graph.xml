@@ -1,51 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    ~ Copyright 2023 The TensorFlow Authors. All Rights Reserved.
-    ~
-    ~ Licensed under the Apache License, Version 2.0 (the "License");
-    ~ you may not use this file except in compliance with the License.
-    ~ You may obtain a copy of the License at
-    ~
-    ~       http://www.apache.org/licenses/LICENSE-2.0
-    ~
-    ~ Unless required by applicable law or agreed to in writing, software
-    ~ distributed under the License is distributed on an "AS IS" BASIS,
-    ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    ~ See the License for the specific language governing permissions and
-    ~ limitations under the License.
--->
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/permissions_fragment">
+    app:startDestination="@id/mainScreenFragment">
 
     <fragment
-        android:id="@+id/permissions_fragment"
-        android:name="com.google.mediapipe.examples.poselandmarker.fragment.PermissionsFragment"
-        android:label="PermissionsFragment">
-
+        android:id="@+id/mainScreenFragment"
+        android:name="com.google.mediapipe.examples.poselandmarker.fragment.MainScreenFragment"
+        android:label="fragment_main_screen"
+        tools:layout="@layout/fragment_main_screen" >
         <action
-            android:id="@+id/action_permissions_to_camera"
-            app:destination="@id/camera_fragment"
-            app:popUpTo="@id/permissions_fragment"
-            app:popUpToInclusive="true" />
+            android:id="@+id/action_mainScreenFragment_to_camera_fragment"
+            app:destination="@id/camera_fragment" />
 
     </fragment>
+
 
     <fragment
         android:id="@+id/camera_fragment"
         android:name="com.google.mediapipe.examples.poselandmarker.fragment.CameraFragment"
-        android:label="CameraFragment">
-
+        android:label="fragment_camera"
+        tools:layout="@layout/fragment_camera">
         <action
-            android:id="@+id/action_camera_to_permissions"
-            app:destination="@id/permissions_fragment"
-            app:popUpTo="@id/camera_fragment"
-            app:popUpToInclusive="true" />
+            android:id="@+id/action_cameraFragment_to_galleryFragment"
+            app:destination="@id/gallery_fragment" />
+        <action
+            android:id="@+id/action_cameraFragment_to_summaryFragment"
+            app:destination="@id/summary_fragment" />
     </fragment>
 
     <fragment
         android:id="@+id/gallery_fragment"
         android:name="com.google.mediapipe.examples.poselandmarker.fragment.GalleryFragment"
-        android:label="GalleryFragment" />
+        android:label="fragment_gallery"
+        tools:layout="@layout/fragment_gallery">
+        <action
+            android:id="@+id/action_galleryFragment_to_cameraFragment"
+            app:destination="@id/camera_fragment" />
+        <action
+            android:id="@+id/action_galleryFragment_to_summaryFragment"
+            app:destination="@id/summary_fragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/summary_fragment"
+        android:name="com.google.mediapipe.examples.poselandmarker.fragment.SummaryFragment"
+        android:label="fragment_summary"
+        tools:layout="@layout/fragment_summary">
+        <action
+            android:id="@+id/action_galleryFragment_to_cameraFragment"
+            app:destination="@id/camera_fragment" />
+        <action
+            android:id="@+id/action_summary_fragment_to_mainScreenFragment"
+            app:destination="@id/mainScreenFragment" />
+    </fragment>
+
+
 </navigation>

@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
     ~ Copyright 2023 The TensorFlow Authors. All Rights Reserved.
     ~
     ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,45 +14,25 @@
     ~ limitations under the License.
 -->
 <resources>
-    <string name="app_name">Pose Landmarker</string>
-
+    <string name="app_name">Rowing Pose Detector</string>
     <string name="media_pipe">MediaPipe</string>
 
-    <string name="alt_bottom_sheet_chevron">Bottom sheet expandable indicator</string>
-
-    <string name="alt_bottom_sheet_max_results_button_minus">Decreasing
-        maximum pose results button</string>
-    <string name="alt_bottom_sheet_max_results_button_plus">Increasing
-        maximum pose results button</string>
-    <string name="alt_bottom_sheet_threshold_button_minus">Decreasing
-        threshold of pose detect results button</string>
-    <string name="alt_bottom_sheet_threshold_button_plus">Increasing
-        threshold of pose detect results button</string>
     <string name="menu_camera">Camera</string>
+
     <string name="menu_gallery">Gallery</string>
-    <string name="tv_gallery_placeholder">Click + to add an image or a video
-        to begin running the pose landmarker.</string>
-
-    <string name="label_inference_time">Inference Time</string>
-    <string name="label_fps">Frames per Second</string>
-    <string name="label_pose_detection_confidence_threshold">Detection
-        Threshold</string>
-    <string name="label_pose_tracking_confidence_threshold">Tracking
-        Threshold</string>
-    <string name="label_pose_presence_confidence_threshold">Presence
-        Threshold</string>
-    <string name="label_num_poses">Number of Poses</string>
-    <string name="label_delegate">Delegate</string>
+    <string name="open_gallery">Open Gallery</string>
+    <string name="gallery_fragment_text">Click + to add a video to begin pose detection</string>
+    <string name="label_fps">FPS: 0</string>
     <string name="label_models">Model</string>
+    <string name="feedback_message">Feedback: %s</string>
+    <string name="count">Reps count: %s</string>
+    <string name="total_stroke_count">Total stroke: %d</string>
+    <string name="button_name">STOP</string>
 
-    <string-array name="delegate_spinner_titles">
-        <item>CPU</item>
-        <item>GPU</item>
-    </string-array>
+    <string name="summary_title">Summary View</string>
+    <string name="correct_percentage">Overview: %d percent of your stroke are correct.</string>
+    <string name="most_common_mistake">Most Common mistake: %s</string>
 
-    <string-array name="models_spinner_titles">
-        <item>Pose Landmarker Full</item>
-        <item>Pose Landmarker Lite</item>
-        <item>Pose Landmarker Heavy</item>
-    </string-array>
+    <string name="back_button">Return to Main Screen</string>
+    <string name="app_title">Rowing Pose Detection</string>
 </resources>
