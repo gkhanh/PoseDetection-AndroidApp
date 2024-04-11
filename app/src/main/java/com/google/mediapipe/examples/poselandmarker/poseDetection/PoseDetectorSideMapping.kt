@@ -14,7 +14,6 @@ class PoseDetectorSideMapping(private val frameMeasurementProvider: FrameMeasure
 
     private var frameMeasurementProviderCancellable: Cancellable? = null
     private val listeners = CopyOnWriteArrayList<Listener>()
-    // private var listeners = listOf<Listener>()
     private fun extractData(frameMeasurement: FrameMeasurement?): List<Float?> {
         var leftFootXCoordinate: Float? = null
         var rightFootXCoordinate: Float? = null

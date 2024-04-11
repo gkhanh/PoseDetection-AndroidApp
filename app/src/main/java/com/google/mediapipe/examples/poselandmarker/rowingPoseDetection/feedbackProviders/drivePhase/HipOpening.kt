@@ -30,13 +30,13 @@ class HipOpening : RowingFeedbackProvider.FeedbackProvider {
     ): List<String> {
         val feedback = mutableListOf<String>()
         if (previousHipAngleDuringDrive != null && lastHipAngleDuringDrive != null && lastKneeAngleDuringDrive != null) {
-            if (lastKneeAngleDuringDrive >= 100){
-                if (lastHipAngleDuringDrive <= 100 && !(previousHipAngleDuringDrive > lastHipAngleDuringDrive)) {
+            if (lastKneeAngleDuringDrive >= KNEE_ANGLE_DURING_DRIVE_THRESHOLD){
+                if (lastHipAngleDuringDrive <= HIP_ANGLE_DURING_DRIVE_THRESHOLD && previousHipAngleDuringDrive + HIP_ANGLE_CHANGE_THRESHOLD < lastHipAngleDuringDrive) {
                     feedback.add("Hip is not open")
                 }
             }
-            if (lastKneeAngleDuringDrive < 100){
-                if (lastHipAngleDuringDrive >= 100){
+            if (lastKneeAngleDuringDrive < KNEE_ANGLE_DURING_DRIVE_THRESHOLD){
+                if (lastHipAngleDuringDrive >= HIP_ANGLE_DURING_DRIVE_THRESHOLD) {
                     feedback.add("Open hip too soon")
                 }
             }
@@ -56,5 +56,11 @@ class HipOpening : RowingFeedbackProvider.FeedbackProvider {
             lastHipAngleDuringDrive,
             lastKneeAngleDuringDrive
         )
+    }
+
+    companion object Thresholds {
+        const val KNEE_ANGLE_DURING_DRIVE_THRESHOLD = 100
+        const val HIP_ANGLE_DURING_DRIVE_THRESHOLD = 100
+        const val HIP_ANGLE_CHANGE_THRESHOLD = 5
     }
 }

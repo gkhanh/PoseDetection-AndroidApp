@@ -10,6 +10,7 @@ import com.google.mediapipe.examples.poselandmarker.poseDetection.PoseDetectorSi
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.IsOnRowingMachineCheck
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.PhaseDetector
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.PhaseDetectorDataProvider
+import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.RowingFeedbackCounter
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.RowingFeedbackProvider
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.RowingStrokeCounter
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.drivePhase.HandsOverKnees
@@ -17,7 +18,7 @@ import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedback
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.drivePhase.KneeExtension
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.recoveryPhase.ArmAndLegMovement
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.recoveryPhase.BodyPosture
-import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.recoveryPhase.KneeOverAnkle
+import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.feedbackProviders.recoveryPhase.KneeAlignWithAnkle
 import com.google.mediapipe.examples.poselandmarker.utils.Cancellable
 import com.google.mediapipe.tasks.components.containers.NormalizedLandmark
 
@@ -80,11 +81,13 @@ class FrameProcessor : RowingFeedbackProvider.RowingFeedbackProviderListener,
             HipOpening(),
             KneeExtension(),
             ArmAndLegMovement(),
-            KneeOverAnkle()
+            KneeAlignWithAnkle()
         )
     )
 
     private val rowingStrokeCounter = RowingStrokeCounter(phaseDetector, rowingFeedbackProvider)
+
+    private val feedbackCounter = RowingFeedbackCounter()
 
     init {
         // Add RowingAnalyzer as a listener to RowingFeedbackProvider
@@ -144,9 +147,15 @@ class FrameProcessor : RowingFeedbackProvider.RowingFeedbackProviderListener,
         for (listener in feedbackListeners) {
             listener(output)
         }
-        val mostCommonFeedback = getMostCommonFeedback()
+
+        // Increment the feedback count for each feedback item
+        nonEmptyFeedback.forEach { feedbackItem ->
+            feedbackCounter.incrementFeedback(feedbackItem.toString())
+        }
+
+        val mostCommonFeedback = feedbackCounter.getMostCommonFeedback()
         for (listener in mostCommonFeedbackListeners) {
-            listener(mostCommonFeedback ?: "No feedback provided")
+            listener(mostCommonFeedback)
         }
     }
 

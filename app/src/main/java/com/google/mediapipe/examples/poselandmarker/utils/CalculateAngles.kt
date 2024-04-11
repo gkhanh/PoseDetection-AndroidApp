@@ -58,8 +58,8 @@ class CalculateAngles {
 
             val elbowAngle = operation.calculateAngle(
                 wristMeasurement.x, wristMeasurement.y,
+                elbowMeasurement.x, elbowMeasurement.y,
                 shoulderMeasurement.x, shoulderMeasurement.y,
-                elbowMeasurement.x, elbowMeasurement.y
             )
             return String.format("%.2f", elbowAngle).toFloat()
         } catch (e: Exception) {

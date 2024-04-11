@@ -1,8 +1,5 @@
 package com.google.mediapipe.examples.poselandmarker.rowingPoseDetection
 
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import com.google.mediapipe.examples.poselandmarker.models.NormalizedFrameMeasurement
 import com.google.mediapipe.examples.poselandmarker.models.NormalizedLandmarks
 import com.google.mediapipe.examples.poselandmarker.models.Phase
@@ -10,7 +7,6 @@ import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.internal
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.internal.RecoveryPhaseChecker
 import com.google.mediapipe.examples.poselandmarker.utils.CalculateAngles
 import com.google.mediapipe.examples.poselandmarker.utils.Cancellable
-import java.util.concurrent.CopyOnWriteArrayList
 
 data class MeasurementData(
     val currentElbowAngle: Float?,
@@ -22,6 +18,7 @@ data class MeasurementData(
     val currentShoulderAngle: Float?,
     val currentKneeXCoordinate: Float?,
     val currentAnkleXCoordinate: Float?,
+    val previousAnkleCoordinate: Float?,
     val currentWristXCoordinate: Float?,
     val previousWristXCoordinate: Float?,
     val currentHipXCoordinate: Float?,
@@ -49,6 +46,8 @@ class PhaseDetector(
     private val listeners = mutableListOf<Listener>()
     private var frameMeasurementBuffer = mutableListOf<NormalizedFrameMeasurement>()
     private var currentPhase = Phase.OTHER
+    private var phaseStartTimestampMs: Long? = 0L
+    var isOnRowingMachine: Boolean = false
 
     init {
         phaseDetectorDataProvider.addIsOnRowingMachineListener {
@@ -57,6 +56,7 @@ class PhaseDetector(
     }
 
     private fun onRowingMachineCheck(isOnRowingMachine: Boolean) {
+        this.isOnRowingMachine = isOnRowingMachine
         if (isOnRowingMachine) {
             if (poseDetectorCancellable == null) {
                 poseDetectorCancellable = phaseDetectorDataProvider.addListener(this)
@@ -72,22 +72,31 @@ class PhaseDetector(
         collectFrameMeasurement(normalizedFrameMeasurement)
         val (success, data) = extractData()  // Call extractData here
         if (currentPhase != Phase.DRIVE_PHASE && this.drivePhaseCheck(success, data)) {
+            if (previousPhase != Phase.DRIVE_PHASE) {
+                phaseStartTimestampMs =
+                    normalizedFrameMeasurement.timestampMs  // Record the start of the phase
+            }
             currentPhase = Phase.DRIVE_PHASE
         }
         if (currentPhase != Phase.RECOVERY_PHASE && this.recoveryPhaseCheck(success, data)) {
+            if (previousPhase != Phase.RECOVERY_PHASE) {
+                phaseStartTimestampMs =
+                    normalizedFrameMeasurement.timestampMs  // Record the start of the phase
+            }
             currentPhase = Phase.RECOVERY_PHASE
+        }
+        if (currentPhase == Phase.OTHER) {
+            phaseStartTimestampMs = 0L  // Reset the start timestamp if no phase is detected
         }
         if (previousPhase != currentPhase) {
             when (currentPhase) {
-                Phase.DRIVE_PHASE -> println("Started a new drive")
-                Phase.RECOVERY_PHASE -> println("Started a new recovery")
-                else -> println("Ended a drive or recovery")
+                Phase.DRIVE_PHASE -> println("Started drive phase")
+                Phase.RECOVERY_PHASE -> println("Started recovery phase")
+                else -> println("Not a drive or recovery phase")
             }
             notifyListeners(frameMeasurementBuffer.toList())
             this.frameMeasurementBuffer = frameMeasurementBuffer.takeLast(5).toMutableList()
-            // frameMeasurementBuffer.drop(5).toMutableList()
         }
-        Log.d("PhaseDetector", "Current phase: $currentPhase")
     }
 
     private fun collectFrameMeasurement(normalizedFrameMeasurement: NormalizedFrameMeasurement) {
@@ -109,30 +118,34 @@ class PhaseDetector(
             isOnRowingMachineCheckCancellable = null
         }
     }
+
     private fun notifyListeners(frameMeasurementBuffer: List<NormalizedFrameMeasurement>) {
         for (listener in listeners) {
             listener.onPhaseChange(currentPhase, frameMeasurementBuffer)
         }
     }
 
-    fun drivePhaseCheck(success: Boolean, data: MeasurementData): Boolean {
-        if (!success) {
+    private fun drivePhaseCheck(success: Boolean, data: MeasurementData): Boolean {
+        if (!success || phaseStartTimestampMs == null) {
             return false
         }
-
-        val bufferTimeMs = frameMeasurementBuffer.last().timestampMs - frameMeasurementBuffer[frameMeasurementBuffer.size - 5].timestampMs
-
+        var bufferTimeMs = frameMeasurementBuffer.last().timestampMs - phaseStartTimestampMs!!
+        if (bufferTimeMs > 8000) {
+            bufferTimeMs = 0
+            phaseStartTimestampMs = frameMeasurementBuffer.last().timestampMs
+        }
         return DrivePhaseChecker.check(data, bufferTimeMs)
     }
 
-    fun recoveryPhaseCheck(success: Boolean, data: MeasurementData): Boolean {
-        if (!success) {
+    private fun recoveryPhaseCheck(success: Boolean, data: MeasurementData): Boolean {
+        if (!success || phaseStartTimestampMs == null) {
             return false
         }
-
-        val bufferTimeMs =
-            frameMeasurementBuffer.last().timestampMs - frameMeasurementBuffer[frameMeasurementBuffer.size - 5].timestampMs
-
+        var bufferTimeMs = frameMeasurementBuffer.last().timestampMs - phaseStartTimestampMs!!
+        if (bufferTimeMs > 8000) {
+            bufferTimeMs = 0
+            phaseStartTimestampMs = frameMeasurementBuffer.last().timestampMs
+        }
         return RecoveryPhaseChecker.check(data, bufferTimeMs)
     }
 
@@ -141,6 +154,7 @@ class PhaseDetector(
             return Pair(
                 false,
                 MeasurementData(
+                    null,
                     null,
                     null,
                     null,
@@ -173,6 +187,7 @@ class PhaseDetector(
 
         var currentKneeXCoordinate: Float? = null
         var currentAnkleXCoordinate: Float? = null
+        var previousAnkleCoordinate: Float? = null
 
         var currentWristXCoordinate: Float? = null
         var previousWristXCoordinate: Float? = null
@@ -194,13 +209,13 @@ class PhaseDetector(
         for (normalizedMeasurement in firstFrameMeasurement.normalizedMeasurements) {
             when (normalizedMeasurement.landmark) {
                 NormalizedLandmarks.WRIST -> previousWristXCoordinate = normalizedMeasurement.x
+                NormalizedLandmarks.ANKLE -> previousAnkleCoordinate = normalizedMeasurement.x
                 NormalizedLandmarks.HIP -> previousHipXCoordinate = normalizedMeasurement.x
                 else -> {
                     continue
                 }
             }
         }
-
         return Pair(
             true, MeasurementData(
                 currentElbowAngle,
@@ -212,6 +227,7 @@ class PhaseDetector(
                 currentShoulderAngle,
                 currentKneeXCoordinate,
                 currentAnkleXCoordinate,
+                previousAnkleCoordinate,
                 currentWristXCoordinate,
                 previousWristXCoordinate,
                 currentHipXCoordinate,

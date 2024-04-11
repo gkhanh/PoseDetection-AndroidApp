@@ -33,12 +33,18 @@ class BodyPosture : RowingFeedbackProvider.FeedbackProvider {
         lastElbowAngleDuringRecovery: Float?
     ): MutableList<String> {
         val feedback = mutableListOf<String>()
-        if (lastElbowAngleDuringRecovery != null && previousElbowAngleDuringRecovery != null && lastElbowAngleDuringRecovery > previousElbowAngleDuringRecovery &&
-            previousHipAngleDuringRecovery != null && lastHipAngleDuringRecovery != null && lastHipAngleDuringRecovery > previousHipAngleDuringRecovery &&
-            !(lastHipAngleDuringRecovery < 90)
+
+        if (lastElbowAngleDuringRecovery != null && previousElbowAngleDuringRecovery != null &&
+            previousHipAngleDuringRecovery != null && lastHipAngleDuringRecovery != null
         ) {
-            feedback.add("Tip your body forward")
+            val isElbowAngleInRange = lastElbowAngleDuringRecovery in 70f..95f
+            val isBodyTippingForward = lastHipAngleDuringRecovery < previousHipAngleDuringRecovery
+
+            if (isElbowAngleInRange && !isBodyTippingForward) {
+                feedback.add("Remember to tip your body forward")
+            }
         }
+
         return feedback
     }
 

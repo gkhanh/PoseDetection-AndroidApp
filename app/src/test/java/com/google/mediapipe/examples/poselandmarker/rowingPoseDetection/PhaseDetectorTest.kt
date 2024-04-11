@@ -21,7 +21,7 @@ class PhaseDetectorTest {
         poseDetectorSideMapping = PoseDetectorSideMapping(frameMeasurementProvider)
         isOnRowingMachineCheck = IsOnRowingMachineCheck(poseDetectorSideMapping)
 
-        phaseDetector = PhaseDetector(isOnRowingMachineCheck, poseDetectorSideMapping)
+        //phaseDetector = PhaseDetector()
     }
 
 

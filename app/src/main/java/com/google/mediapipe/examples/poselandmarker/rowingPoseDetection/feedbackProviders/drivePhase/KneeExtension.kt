@@ -24,18 +24,20 @@ class KneeExtension : RowingFeedbackProvider.FeedbackProvider {
         return emptyList()
     }
 
-    private fun analyzeData(
+    fun analyzeData(
         previousHipAngleDuringDrive: Float?,
         lastHipAngleDuringDrive: Float?,
         previousKneeAngleDuringDrive: Float?,
         lastKneeAngleDuringDrive: Float?
     ): List<String> {
         val feedback = mutableListOf<String>()
-        if (previousKneeAngleDuringDrive != null && lastKneeAngleDuringDrive != null && lastKneeAngleDuringDrive > previousKneeAngleDuringDrive) {
-            if (previousHipAngleDuringDrive != null && lastHipAngleDuringDrive != null && previousKneeAngleDuringDrive >= 160 && lastHipAngleDuringDrive in 60.0F..previousHipAngleDuringDrive && previousHipAngleDuringDrive <= 90) {
+        if (previousKneeAngleDuringDrive != null && lastKneeAngleDuringDrive != null && lastKneeAngleDuringDrive > previousKneeAngleDuringDrive
+            && previousHipAngleDuringDrive != null && lastHipAngleDuringDrive != null
+        ) {
+            if (previousKneeAngleDuringDrive >= 160 && lastHipAngleDuringDrive in 60.0F..previousHipAngleDuringDrive && previousHipAngleDuringDrive <= 90) {
                 feedback.add("Keep your back straight when extending legs")
             }
-            if (lastKneeAngleDuringDrive < 150) {
+            if (lastKneeAngleDuringDrive < KNEE_EXTENSION_ANGLE_THRESHOLD) {
                 feedback.add("Legs not fully extended")
             }
 
@@ -58,5 +60,9 @@ class KneeExtension : RowingFeedbackProvider.FeedbackProvider {
             previousKneeAngleDuringDrive,
             lastKneeAngleDuringDrive
         )
+    }
+
+    companion object Thresholds {
+        const val KNEE_EXTENSION_ANGLE_THRESHOLD = 150
     }
 }

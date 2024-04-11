@@ -51,11 +51,11 @@ class HandsOverKnees : RowingFeedbackProvider.FeedbackProvider {
                     feedback.add("Not pulling arm")
                 }
             }
-            if (!(lastShoulderAngleDuringDrive < 20) && 60 < lastElbowAngleDuringDrive && lastElbowAngleDuringDrive <= 95) {
+            if (!(lastShoulderAngleDuringDrive < 35) && 60 < lastElbowAngleDuringDrive && lastElbowAngleDuringDrive <= 95) {
                 feedback.add("Arm not pulled back properly")
             }
-            if (100 < lastKneeAngleDuringDrive && lastKneeAngleDuringDrive < 140){
-                if (lastWristXCoordinateDuringDrive < lastKneeXCoordinateDuringDrive) {
+            if (120 < lastKneeAngleDuringDrive && lastKneeAngleDuringDrive < 180){
+                if (lastWristXCoordinateDuringDrive > lastKneeXCoordinateDuringDrive) {
                     feedback.add("Hands not over knees")
                 }
             }

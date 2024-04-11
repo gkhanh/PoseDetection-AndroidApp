@@ -9,26 +9,26 @@ class ArmAndLegMovementTest {
     @Test
     fun test_ArmAndLegMovementRule(){
         /* Given */
-        // This should show nothing
-//        val lastElbowAngleDuringRecovery = 50f
-//        val previousElbowAngleDuringRecovery = 40f
+        // This should shows the message "Extend your arms forward during recovery."
+//        val lastElbowAngleDuringRecovery = 180f
+//        val previousElbowAngleDuringRecovery = 50f
 //        val lastKneeAngleDuringRecovery = 160f
-//        val previousKneeAngleDuringRecovery = 170f
-//        val lastKneeXCoordinateDuringRecovery = 0.63f
-//        val previousWristXCoordinateDuringRecovery = 0.22f
-//        val lastWristXCoordinateDuringRecovery = 0.26f
+//        val previousKneeAngleDuringRecovery = 155f
+//        val lastKneeXCoordinateDuringRecovery = 0.43f
+//        val previousWristXCoordinateDuringRecovery = 0.44f
+//        val lastWristXCoordinateDuringRecovery = 0.45f
 
-        // This should show the message "Move the handle forward"
-//        val lastElbowAngleDuringRecovery = 30f
+        // This should show the message "Fully extend your arms during recovery."
+//        val lastElbowAngleDuringRecovery = 130f
 //        val previousElbowAngleDuringRecovery = 40f
 //        val lastKneeAngleDuringRecovery = 160f
 //        val previousKneeAngleDuringRecovery = 170f
 //        val lastKneeXCoordinateDuringRecovery = 0.63f
 //        val previousWristXCoordinateDuringRecovery = 0.24f
-//        val lastWristXCoordinateDuringRecovery = 0.20f
+//        val lastWristXCoordinateDuringRecovery = 0.29f
 
-        // This should shows the message "Straighten the arm"
-        val lastElbowAngleDuringRecovery = 140f
+        // This should show nothing
+        val lastElbowAngleDuringRecovery = 180f
         val previousElbowAngleDuringRecovery = 50f
         val lastKneeAngleDuringRecovery = 160f
         val previousKneeAngleDuringRecovery = 170f
@@ -36,13 +36,26 @@ class ArmAndLegMovementTest {
         val previousWristXCoordinateDuringRecovery = 0.24f
         val lastWristXCoordinateDuringRecovery = 0.45f
 
+        // This should show the message "Focus on extending your arms forward before bending your knees during recovery." and "Extend your arms forward during recovery."
+//        val lastElbowAngleDuringRecovery = 160f
+//        val previousElbowAngleDuringRecovery = 40f
+//        val lastKneeAngleDuringRecovery = 160f
+//        val previousKneeAngleDuringRecovery = 170f
+//        val lastKneeXCoordinateDuringRecovery = 0.63f
+//        val previousWristXCoordinateDuringRecovery = 0.22f
+//        val lastWristXCoordinateDuringRecovery = 0.23f
+
         /* When */
         val feedbackMessage = ArmAndLegMovement().analyzeData(lastElbowAngleDuringRecovery, previousElbowAngleDuringRecovery, lastKneeAngleDuringRecovery, previousKneeAngleDuringRecovery, lastKneeXCoordinateDuringRecovery, previousWristXCoordinateDuringRecovery, lastWristXCoordinateDuringRecovery)
 
         /* Then */
-        //assertEquals(listOf("Move the handle forward"), feedbackMessage)
-        assertEquals(listOf("Straighten the arm"), feedbackMessage)
-        // assertTrue("Feedback message should be empty", feedbackMessage.isEmpty())
-
+        // Case 1
+        // assertEquals(listOf("Extend your arms forward during recovery."), feedbackMessage)
+        // Case 2
+        // assertEquals(listOf("Fully extend your arms during recovery."), feedbackMessage)
+        // Case 3
+        assertTrue("Feedback message should be empty", feedbackMessage.isEmpty())
+        // Case 4
+        // assertEquals(listOf("Extend your arms forward during recovery.", "Focus on extending your arms forward before bending your knees during recovery."), feedbackMessage)
     }
 }

@@ -1,7 +1,6 @@
 package com.google.mediapipe.examples.poselandmarker.poseDetection
 
 import com.google.mediapipe.examples.poselandmarker.models.FrameMeasurement
-import com.google.mediapipe.examples.poselandmarker.models.FrameMeasurementProvider
 import com.google.mediapipe.examples.poselandmarker.models.LandmarkPosition
 import com.google.mediapipe.examples.poselandmarker.models.Measurement
 import com.google.mediapipe.examples.poselandmarker.models.NormalizedFrameMeasurement

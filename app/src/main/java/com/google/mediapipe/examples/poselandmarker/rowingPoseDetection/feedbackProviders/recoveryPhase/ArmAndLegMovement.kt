@@ -5,6 +5,7 @@ import com.google.mediapipe.examples.poselandmarker.models.NormalizedLandmarks
 import com.google.mediapipe.examples.poselandmarker.models.Phase
 import com.google.mediapipe.examples.poselandmarker.rowingPoseDetection.RowingFeedbackProvider
 import com.google.mediapipe.examples.poselandmarker.utils.CalculateAngles
+import kotlin.math.abs
 
 class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
     override fun getFeedback(
@@ -20,13 +21,15 @@ class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
             val previousWristXCoordinateDuringRecovery = data[4]
             val lastKneeXCoordinateDuringRecovery = data[5]
             val lastWristXCoordinateDuringRecovery = data[6]
-            return analyzeData(lastElbowAngleDuringRecovery,
+            return analyzeData(
+                lastElbowAngleDuringRecovery,
                 previousElbowAngleDuringRecovery,
                 lastKneeAngleDuringRecovery,
                 previousKneeAngleDuringRecovery,
                 previousWristXCoordinateDuringRecovery,
                 lastKneeXCoordinateDuringRecovery,
-                lastWristXCoordinateDuringRecovery)
+                lastWristXCoordinateDuringRecovery,
+            )
         }
         return emptyList()
     }
@@ -45,9 +48,12 @@ class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
         var lastKneeXCoordinateDuringRecovery: Float? = null
         var previousWristXCoordinateDuringRecovery: Float? = null
         var lastWristXCoordinateDuringRecovery: Float? = null
+        var previousWristYCoordinateDuringRecovery: Float? = null
+        var lastWristYCoordinateDuringRecovery: Float? = null
         for (normalizedMeasurement in firstFrameMeasurement.normalizedMeasurements) {
             if (normalizedMeasurement.landmark == NormalizedLandmarks.WRIST) {
                 previousWristXCoordinateDuringRecovery = normalizedMeasurement.x
+                previousWristYCoordinateDuringRecovery = normalizedMeasurement.y
             }
         }
         for (normalizedMeasurement in lastFrameMeasurement.normalizedMeasurements) {
@@ -56,6 +62,7 @@ class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
             }
             if (normalizedMeasurement.landmark == NormalizedLandmarks.WRIST) {
                 lastWristXCoordinateDuringRecovery = normalizedMeasurement.x
+                lastWristYCoordinateDuringRecovery = normalizedMeasurement.y
             }
         }
         return listOf(
@@ -65,7 +72,9 @@ class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
             previousKneeAngleDuringRecovery,
             previousWristXCoordinateDuringRecovery,
             lastKneeXCoordinateDuringRecovery,
-            lastWristXCoordinateDuringRecovery
+            lastWristXCoordinateDuringRecovery,
+            lastWristYCoordinateDuringRecovery,
+            previousWristYCoordinateDuringRecovery,
         )
     }
 
@@ -76,31 +85,49 @@ class ArmAndLegMovement : RowingFeedbackProvider.FeedbackProvider {
         previousKneeAngleDuringRecovery: Float?,
         lastKneeXCoordinateDuringRecovery: Float?,
         previousWristXCoordinateDuringRecovery: Float?,
-        lastWristXCoordinateDuringRecovery: Float?
+        lastWristXCoordinateDuringRecovery: Float?,
     ): MutableList<String> {
         val feedback = mutableListOf<String>()
-        if (lastWristXCoordinateDuringRecovery != null && previousWristXCoordinateDuringRecovery != null &&
-            lastElbowAngleDuringRecovery != null && previousElbowAngleDuringRecovery != null) {
-            if (previousWristXCoordinateDuringRecovery - lastWristXCoordinateDuringRecovery > 0.05 && previousElbowAngleDuringRecovery - lastElbowAngleDuringRecovery > 5) {
-                feedback.add("Move the handle forward")
-            }
-        }
-        if (lastKneeAngleDuringRecovery != null && 150 < lastKneeAngleDuringRecovery && lastKneeAngleDuringRecovery <= 180) {
-            if (lastElbowAngleDuringRecovery != null && lastElbowAngleDuringRecovery < 150) {
-                feedback.add("Straighten the arm")
-            } else if (lastWristXCoordinateDuringRecovery != null && lastKneeXCoordinateDuringRecovery != null && lastWristXCoordinateDuringRecovery < lastKneeXCoordinateDuringRecovery) {
-                feedback.add("Straighten arms until hands over knees")
-            }
-        }
 
-        // for checking the arm first before bending knee
-        if (lastElbowAngleDuringRecovery != null && lastKneeAngleDuringRecovery != null && previousElbowAngleDuringRecovery != null && previousKneeAngleDuringRecovery != null) {
-            if (150 < lastKneeAngleDuringRecovery && lastKneeAngleDuringRecovery < 170) {
-                if (lastElbowAngleDuringRecovery - previousElbowAngleDuringRecovery <= 5 && lastKneeAngleDuringRecovery - previousKneeAngleDuringRecovery >= 10) {
-                    feedback.add("Move arms before bend your knees")
+        if (lastWristXCoordinateDuringRecovery != null && previousWristXCoordinateDuringRecovery != null &&
+            lastElbowAngleDuringRecovery != null && previousElbowAngleDuringRecovery != null &&
+            lastKneeAngleDuringRecovery != null && previousKneeAngleDuringRecovery != null &&
+            lastKneeXCoordinateDuringRecovery != null) {
+            val wristCoordinateChange =
+                lastWristXCoordinateDuringRecovery - previousWristXCoordinateDuringRecovery
+            val kneeAngleChange = previousKneeAngleDuringRecovery - lastKneeAngleDuringRecovery
+
+            // Check if arms are extending forward
+            if (wristCoordinateChange < WRIST_COORDINATE_CHANGE_THRESHOLD) {
+                feedback.add("Extend your arms forward during recovery.")
+            }
+
+            // Check if knees are bending too early
+            if (abs(kneeAngleChange) >= KNEE_ANGLE_CHANGE_THRESHOLD) {
+                if (lastKneeAngleDuringRecovery <= KNEE_ANGLE_UPPER_LIMIT) {
+                    if (lastWristXCoordinateDuringRecovery < lastKneeXCoordinateDuringRecovery - X_THRESHOLD) {
+                        feedback.add("Avoid bending your knees too early. Wait until your arms are extended forward.")
+                    }
                 }
+            }
+
+            if (lastElbowAngleDuringRecovery < ELBOW_ANGLE_FULL_EXTENSION_THRESHOLD) {
+                feedback.add("Fully extend your arms during recovery.")
+            }
+
+            // Check if arms are not extending forward and knees are bending
+            if (wristCoordinateChange <= WRIST_COORDINATE_CHANGE_THRESHOLD && kneeAngleChange >= KNEE_ANGLE_CHANGE_THRESHOLD) {
+                feedback.add("Focus on extending your arms forward before bending your knees during recovery.")
             }
         }
         return feedback
+    }
+
+    companion object Thresholds {
+        const val WRIST_COORDINATE_CHANGE_THRESHOLD = 0.02f
+        const val X_THRESHOLD = 0.02f
+        const val KNEE_ANGLE_UPPER_LIMIT = 40f
+        const val KNEE_ANGLE_CHANGE_THRESHOLD = 4f
+        const val ELBOW_ANGLE_FULL_EXTENSION_THRESHOLD = 145f
     }
 }

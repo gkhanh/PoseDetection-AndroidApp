@@ -1,47 +1,70 @@
 package com.google.mediapipe.examples.poselandmarker.fragment
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Matrix
+import android.Manifest
+import android.content.ContentValues
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import android.os.SystemClock
-import androidx.fragment.app.Fragment
+import android.provider.MediaStore
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
-import androidx.camera.core.AspectRatio
+import android.view.WindowInsetsController
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
-import androidx.camera.core.UseCase
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
-import androidx.lifecycle.LifecycleOwner
-import androidx.navigation.fragment.findNavController
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.mediapipe.examples.poselandmarker.FrameProcessor
+import androidx.camera.video.MediaStoreOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
+import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
 import com.google.mediapipe.examples.poselandmarker.R
 import com.google.mediapipe.examples.poselandmarker.databinding.FragmentCameraBinding
-import com.google.mediapipe.framework.image.BitmapImageBuilder
-import com.google.mediapipe.framework.image.MPImage
-import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.core.OutputHandler
-import com.google.mediapipe.tasks.vision.core.RunningMode
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-import java.util.concurrent.Executors
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class CameraFragment : Fragment() {
-    private lateinit var frameProcessor: FrameProcessor
+
     private var _fragmentCameraBinding: FragmentCameraBinding? = null
     private val fragmentCameraBinding
         get() = _fragmentCameraBinding!!
+    private var cameraFacing = CameraSelector.LENS_FACING_BACK
+    private var videoCapture: VideoCapture<Recorder>? = null
+    private var recording: Recording? = null
+    private var cameraProvider: ProcessCameraProvider? = null
 
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val granted = permissions.entries.all {
+                it.value
+            }
+            if (granted) {
+                startCamera(cameraFacing)
+            } else {
+                Toast.makeText(
+                    requireContext(),
+                    "Permissions not granted by the user.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+//    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 42)
+//        requireActivity().window.statusBarColor = requireContext().getColor(R.color.status_bar_black)
+//        requireActivity().window.insetsController?.setSystemBarsAppearance(0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
+//        requestPermissions(
+//            arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE),
+//            42
+//        )
     }
 
     override fun onCreateView(
@@ -53,104 +76,159 @@ class CameraFragment : Fragment() {
         return fragmentCameraBinding.root
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Set status bar color and light status bars here
+        requireActivity().window.statusBarColor = requireContext().getColor(R.color.status_bar_black)
+        requireActivity().window.insetsController?.setSystemBarsAppearance(
+            0, WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS)
 
-        val cameraView = view.findViewById<PreviewView>(R.id.previewView)
-        val outputTextView = view.findViewById<TextView>(R.id.feedbackTextView)
-//        frameProcessor = FrameProcessor()
-//
-//        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
-//        cameraProviderFuture.addListener(
-//            {
-//                setUpCameraAndMediaPipe(cameraView, cameraProviderFuture)
-//            },
-//            ContextCompat.getMainExecutor(requireContext())
-//        )
-//
-//        frameProcessor.addFeedbackListener { output ->
-//            outputTextView.post {
-//                outputTextView.text = output.message
-//                println("Something: ${output.message}")
-//            }
-//        }
-        fragmentCameraBinding.stopButton.setOnClickListener {
-            findNavController().navigate(R.id.action_cameraFragment_to_summaryFragment)
+        if (allPermissionsGranted()) {
+            startCamera(cameraFacing)
+        } else {
+            requestPermissionLauncher.launch(REQUIRED_PERMISSIONS)
+        }
+
+        fragmentCameraBinding.capture.setOnClickListener {
+            if (recording == null) {
+                startRecording()
+            } else {
+                stopRecording()
+            }
+        }
+
+        fragmentCameraBinding.flipCamera.setOnClickListener {
+            cameraFacing = if (cameraFacing == CameraSelector.LENS_FACING_BACK) {
+                CameraSelector.LENS_FACING_FRONT
+            } else {
+                CameraSelector.LENS_FACING_BACK
+            }
+            startCamera(cameraFacing)
+        }
+
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            startCamera(cameraFacing)
         }
     }
 
-    private fun setUpCameraAndMediaPipe(
-        cameraView: PreviewView,
-        cameraProviderFuture: ListenableFuture<ProcessCameraProvider>
-    ) {
-        val imageAnalyzer = ImageAnalysis.Builder().setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .setTargetRotation(cameraView.display.rotation)
-            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-            .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
-            .build()
-        setUpCamera(cameraProviderFuture, cameraView, imageAnalyzer)
-        val poseLandmarker = getPoseLandmarker(requireContext())
-        imageAnalyzer.setAnalyzer(Executors.newSingleThreadExecutor()) { image -> detectLiveStream(image, poseLandmarker)
+    private fun startRecording() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.CAMERA
+            ) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Request permissions and return
+            requestPermissions(
+                arrayOf(
+                    Manifest.permission.CAMERA,
+                    Manifest.permission.RECORD_AUDIO,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                ), 1001
+            )
+            return
         }
-    }
 
-    private fun getPoseLandmarker(context: Context): PoseLandmarker {
-        val baseOptionsBuilder =
-            BaseOptions.builder().setModelAssetPath("pose_landmarker_full.task")
-        val optionsBuilder = PoseLandmarker.PoseLandmarkerOptions.builder()
-            .setBaseOptions(baseOptionsBuilder.build())
-            .setMinPoseDetectionConfidence(0.5f)
-            .setMinTrackingConfidence(0.5f)
-            .setMinPosePresenceConfidence(0.5f)
-            .setNumPoses(1)
-            .setResultListener(object :
-                OutputHandler.ResultListener<PoseLandmarkerResult?, MPImage?> {
-                override fun run(result: PoseLandmarkerResult?, input: MPImage?) {
-                    if (result == null || input == null) return
-                    frameProcessor.process(result.timestampMs(), result.landmarks())
+        val name = SimpleDateFormat(
+            "yyyy-MM-dd-HH-mm-ss-SSS",
+            Locale.getDefault()
+        ).format(System.currentTimeMillis())
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, "DCIM/CameraX-Video")
+        }
+
+        val outputOptions = MediaStoreOutputOptions.Builder(
+            requireContext().contentResolver,
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        )
+            .setContentValues(contentValues).build()
+
+        fragmentCameraBinding.capture.setImageResource(R.drawable.baseline_stop_circle_24) // Change button image to 'stop' icon
+
+        recording = videoCapture?.output?.prepareRecording(requireContext(), outputOptions)
+            ?.withAudioEnabled()?.start(ContextCompat.getMainExecutor(requireContext())) { event ->
+                when (event) {
+                    is VideoRecordEvent.Start -> {
+                        fragmentCameraBinding.capture.isEnabled = true
+                    }
+
+                    is VideoRecordEvent.Finalize -> {
+                        if (!event.hasError()) {
+                            val msg = "Video capture succeeded: ${event.outputResults.outputUri}"
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                        } else {
+                            recording?.close()
+                            recording = null
+                            val msg = "Error: ${event.error}"
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+                        }
+                        fragmentCameraBinding.capture.setImageResource(R.drawable.baseline_fiber_manual_record_24) // Change button image back to 'record' icon
+                    }
                 }
-            })
-            .setErrorListener { e -> println("PoseLandmarkerResult: $e") }
-            .setRunningMode(RunningMode.LIVE_STREAM)
-        val options = optionsBuilder.build()
-        return PoseLandmarker.createFromOptions(context, options)
+            }
     }
 
-    private fun setUpCamera(
-        cameraProviderFuture: ListenableFuture<ProcessCameraProvider>,
-        cameraView: PreviewView,
-        imageAnalyzer: UseCase
-    ) {
-        val cameraProvider = cameraProviderFuture.get()
-        val preview = Preview.Builder()
-            .setTargetAspectRatio(AspectRatio.RATIO_4_3)
-            .setTargetRotation(cameraView.display.rotation)
-            .build()
-        cameraProvider.unbindAll()
-        cameraProvider.bindToLifecycle(this as LifecycleOwner, CameraSelector.Builder().build(), preview, imageAnalyzer)
-        preview.setSurfaceProvider(cameraView.surfaceProvider)
+
+    private fun stopRecording() {
+        recording?.stop()
+        recording = null
     }
 
-    private fun detectLiveStream(
-        imageProxy: ImageProxy,
-        poseLandmarker: PoseLandmarker,
-    ) {
-        val frameTimeMillis = SystemClock.uptimeMillis()
-        val bitmapBuffer = Bitmap.createBitmap(
-            imageProxy.width,
-            imageProxy.height,
-            Bitmap.Config.ARGB_8888
+    private fun startCamera(cameraFacing: Int) {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
+        cameraProviderFuture.addListener({
+            cameraProvider = cameraProviderFuture.get()
+
+            val preview = Preview.Builder()
+                .build()
+                .also {
+                    it.setSurfaceProvider(fragmentCameraBinding.previewView.surfaceProvider)
+                }
+
+            val recorder = Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                .build()
+            videoCapture = VideoCapture.withOutput(recorder)
+
+            val cameraSelector = CameraSelector.Builder()
+                .requireLensFacing(cameraFacing).build()
+
+            cameraProvider?.unbindAll()
+
+            val camera =
+                cameraProvider?.bindToLifecycle(this, cameraSelector, preview, videoCapture)
+
+        }, ContextCompat.getMainExecutor(requireContext()))
+    }
+
+    private fun allPermissionsGranted() = REQUIRED_PERMISSIONS.all {
+        ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraProvider?.unbindAll()
+    }
+
+    companion object {
+        private val REQUIRED_PERMISSIONS = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
-        imageProxy.use { bitmapBuffer.copyPixelsFromBuffer(imageProxy.planes[0].buffer) }
-        imageProxy.close()
-        val matrix = Matrix().apply {
-            postRotate(imageProxy.imageInfo.rotationDegrees.toFloat())
-        }
-        val rotatedBitmap = Bitmap.createBitmap(
-            bitmapBuffer, 0, 0, bitmapBuffer.width, bitmapBuffer.height,
-            matrix, true
-        )
-        val mpImage = BitmapImageBuilder(rotatedBitmap).build()
-        poseLandmarker.detectAsync(mpImage, frameTimeMillis)
     }
 }

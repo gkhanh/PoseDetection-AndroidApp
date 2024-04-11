@@ -19,7 +19,7 @@ class RowingStrokeCounter(
         currentPhase: Phase,
         frameMeasurementBuffer: List<NormalizedFrameMeasurement>
     ) {
-        if (this.currentPhase == Phase.DRIVE_PHASE && currentPhase == Phase.RECOVERY_PHASE) {
+        if (phaseDetector.isOnRowingMachine && this.currentPhase == Phase.DRIVE_PHASE && currentPhase == Phase.RECOVERY_PHASE) {
             // A full stroke has been completed
             strokeCount++
             if (!feedbackProvider.wasFeedbackProvided()) {

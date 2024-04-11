@@ -12,13 +12,28 @@
         android:layout_height="match_parent"
         app:scaleType="fillStart" />
 
-    <Button
-        android:id="@+id/stopButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_marginStart="20dp"
-        android:layout_marginBottom="20dp"
-        android:text="@string/button_name" />
+    <ImageButton
+        android:id="@+id/capture"
+        android:layout_width="60sp"
+        android:layout_height="60sp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="40sp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:scaleType="centerCrop"
+        android:src="@drawable/baseline_fiber_manual_record_24" />
+
+
+    <ImageButton
+        android:id="@+id/flipCamera"
+        android:layout_width="60sp"
+        android:layout_height="60sp"
+        android:layout_gravity="bottom|start"
+        android:layout_marginEnd="20sp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:baselineAlignBottom="false"
+        android:layout_marginBottom="40sp"
+        android:src="@drawable/baseline_flip_camera_android_24"
+        app:tint="#fff">
+    </ImageButton>
 
 </FrameLayout>

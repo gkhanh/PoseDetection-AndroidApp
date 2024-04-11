@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background track -->
+    <item android:id="@android:id/background">
+        <shape>
+            <solid android:color="#FFDDDDDD" /> <!-- Change this to your desired background color -->
+        </shape>
+    </item>
+
+    <!-- Primary progress -->
+    <item android:id="@android:id/progress">
+        <clip>
+            <shape>
+                <solid android:color="@color/light_blue_RP3_theme" /> <!-- This is the color you want to change to -->
+            </shape>
+        </clip>
+    </item>
+</layer-list>

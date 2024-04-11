@@ -30,16 +30,24 @@ class RowingFeedbackProvider(
         }
     }
 
+    private fun notifyListeners(feedback: List<Any>) {
+        for (listener in listeners) {
+            listener.onFeedback(feedback)
+        }
+    }
+
     override fun onPhaseChange(
         currentPhase: Phase,
         frameMeasurementBuffer: List<NormalizedFrameMeasurement>
     ) {
-        val feedback = feedbackProviders.flatMap { it.getFeedback(currentPhase, frameMeasurementBuffer) }
-        incrementFeedbackCounts(feedback)
-        for (listener in listeners) {
-            listener.onFeedback(feedback)
+        if (phaseDetector.isOnRowingMachine) {
+            val feedback = feedbackProviders.flatMap { it.getFeedback(currentPhase, frameMeasurementBuffer) }
+            incrementFeedbackCounts(feedback)
+            for (listener in listeners) {
+                listener.onFeedback(feedback)
+                notifyListeners(feedback)  // Notify listeners immediately when feedback is available
+            }
         }
-        // feedbackCounter.reset()
     }
 
     private fun incrementFeedbackCounts(feedback: List<Any>) {

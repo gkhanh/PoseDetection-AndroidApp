@@ -6,7 +6,6 @@ class RowingFeedbackCounter {
     private val feedbackCounts = mutableMapOf<String, Int>()
 
     fun incrementFeedback(feedback: String) {
-        // Log.d("RowingFeedbackCounter", "Increment feedback: $feedback")
         val count = feedbackCounts[feedback] ?: 0
         feedbackCounts[feedback] = count + 1
     }
@@ -15,8 +14,8 @@ class RowingFeedbackCounter {
         return feedbackCounts.filter { it.value > 0 }
     }
 
-    fun getMostCommonFeedback(): String? {
-        return feedbackCounts.filterKeys { it.isNotBlank() }.maxByOrNull { it.value }?.key
+    fun getMostCommonFeedback(): String {
+        return feedbackCounts.maxByOrNull { it.value }?.key ?: "No feedback provided"
     }
 
     fun reset() {

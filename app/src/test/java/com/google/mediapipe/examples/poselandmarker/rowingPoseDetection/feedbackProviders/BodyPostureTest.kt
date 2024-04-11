@@ -10,17 +10,23 @@ class BodyPostureTest {
     fun test_BodyPostureRule(){
         /* Given */
 
-        // This values should show message "Tip your body forward"
+        // This values should show message "Remember to tip your body forward
         val previousHipAngleDuringRecovery = 130f
         val lastHipAngleDuringRecovery = 140f
         val previousElbowAngleDuringRecovery = 70f
-        val lastElbowAngleDuringRecovery = 170f
+        val lastElbowAngleDuringRecovery = 85f
+
+        // This values should show nothing
+//        val previousHipAngleDuringRecovery = 130f
+//        val lastHipAngleDuringRecovery = 100f
+//        val previousElbowAngleDuringRecovery = 70f
+//        val lastElbowAngleDuringRecovery = 170f
 
         /* When */
         val feedbackMessage = BodyPosture().analyzeData(previousHipAngleDuringRecovery, lastHipAngleDuringRecovery, previousElbowAngleDuringRecovery, lastElbowAngleDuringRecovery)
 
         /* Then */
-        assertEquals(listOf("Tip your body forward"), feedbackMessage)
+        assertEquals(listOf("Remember to tip your body forward"), feedbackMessage)
     }
 
 }

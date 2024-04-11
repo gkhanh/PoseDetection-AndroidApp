@@ -20,7 +20,9 @@
     <color name="mp_color_primary_dark">#00676D</color>
     <color name="mp_color_secondary">#FBBC04</color>
     <color name="mp_color_secondary_variant">#F9AB00</color>
-    <color name="mp_color_error">#B00020</color>
+    <color name="status_bar_black">#000000</color>
+    <color name="status_bar_white">#FFFFFF</color>
+    <color name="stop_button">#DC3545</color>
     <color name="text_display">#e00d85</color>
     <color name="toolbar_background">#E0E0E0</color>
     <color name="ic_launcher_background">#FFFFFF</color>
@@ -32,6 +34,6 @@
     <color name="light_blue_600">#FF039BE5</color>
     <color name="light_blue_900">#FF01579B</color>
     <color name="light_blue_A200">#FF40C4FF</color>
-    <color name="light_blue_A400">#FF00B0FF</color>
+    <color name="light_blue_RP3_theme">#3AC4E7</color>
     <color name="black_overlay">#66000000</color>
 </resources>

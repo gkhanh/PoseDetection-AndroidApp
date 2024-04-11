@@ -25,10 +25,6 @@
         <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/mp_color_secondary</item>
         <item name="colorSecondaryVariant">@color/mp_color_secondary_variant</item>
-        <item name="colorError">@color/mp_color_error</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimary</item>
-        <!-- Customize your theme here. -->
     </style>
 
     <style name="BottomSheetSpinnerItemStyle" parent="Widget.AppCompat.Light.DropDownItem.Spinner">

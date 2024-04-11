@@ -6,84 +6,117 @@
     android:fadingEdge="horizontal"
     tools:context=".fragment.SummaryFragment">
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content">
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="bottom"
-            android:background="#46FFFFFF"
-            android:scaleType="centerCrop"
-            android:src="@drawable/image1" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="#88181A16"/>
-
-    </RelativeLayout>
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="center_horizontal|start"
         android:orientation="vertical">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.4">
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="bottom"
+                android:scaleType="centerCrop"
+                android:src="@drawable/summarybackground" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/gradient_light" />
+        </RelativeLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="#007F8B"
-            android:gravity="center"
-            android:padding="10dp">
-
+            android:layout_height="0dp"
+            android:layout_weight="0.6"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/summary_title"
                 android:textAppearance="@style/TextAppearance.AppCompat.Display1"
-                android:textColor="#FFFFFF" />
+                android:textColor="#000000" />
+
+            <TextView
+                android:id="@+id/strokeCountNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/total_stroke_count"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="@color/light_blue_RP3_theme"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/strokeCountNumberLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/label_total_stroke_count"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+
+            <TextView
+                android:id="@+id/CommonMistake"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:text="@string/most_common_mistake"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="@color/light_blue_RP3_theme"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/CommonMistakeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/label_most_common_mistake"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/CorrectPercentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/correct_percentage"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="@color/light_blue_RP3_theme"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/CorrectPercentageLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/label_correct_percentage"
+                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                android:textColor="#000000"
+                android:textSize="18sp" />
+
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/strokeCountNumber"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/total_stroke_count"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="#EF9A9A"
-            android:textSize="25sp" />
-
-        <TextView
-            android:id="@+id/CommonMistake"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/most_common_mistake"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="#EF9A9A"
-            android:textSize="25sp" />
-
-        <TextView
-            android:id="@+id/CorrectPercentage"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/correct_percentage"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:textColor="#EF9A9A"
-            android:textSize="25sp" />
-
     </LinearLayout>
 
     <Button
         android:id="@+id/backButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center"
-        android:layout_marginBottom="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_gravity="bottom|center|center_vertical"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginBottom="16dp"
+        android:backgroundTint="@color/light_blue_RP3_theme"
         android:text="@string/back_button" />
+
 
 </FrameLayout>

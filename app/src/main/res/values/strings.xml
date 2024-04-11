@@ -19,20 +19,31 @@
 
     <string name="menu_camera">Camera</string>
 
+    <!-- Gallery screen texts -->
+
     <string name="menu_gallery">Gallery</string>
     <string name="open_gallery">Open Gallery</string>
     <string name="gallery_fragment_text">Click + to add a video to begin pose detection</string>
-    <string name="label_fps">FPS: 0</string>
-    <string name="label_models">Model</string>
-    <string name="feedback_message">Feedback: %s</string>
-    <string name="count">Reps count: %s</string>
-    <string name="total_stroke_count">Total stroke: %d</string>
+
+
+    <string name="label_timestamp">%d s</string>
+    <string name="label_timestamp_title">Time</string>
+    <string name="feedback_message">%s</string>
+    <string name="label_feedback_message">Feedback</string>
+    <string name="count">%s</string>
+    <string name="label_count">Stroke count</string>
+
     <string name="button_name">STOP</string>
 
+    <!-- Summary screen texts -->
+    <string name="total_stroke_count">%d</string>
+    <string name="label_total_stroke_count">Total stroke</string>
     <string name="summary_title">Summary View</string>
-    <string name="correct_percentage">Overview: %d percent of your stroke are correct.</string>
-    <string name="most_common_mistake">Most Common mistake: %s</string>
+    <string name="correct_percentage">%d percent of your stroke are correct</string>
+    <string name="label_correct_percentage">Overview</string>
+    <string name="most_common_mistake">%s</string>
+    <string name="label_most_common_mistake">Most Common mistake</string>
 
-    <string name="back_button">Return to Main Screen</string>
+    <string name="back_button">Back To Home</string>
     <string name="app_title">Rowing Pose Detection</string>
 </resources>

@@ -1,29 +1,40 @@
 package com.google.mediapipe.examples.poselandmarker.fragment
 
 import android.graphics.Bitmap
-import android.media.MediaPlayer
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PointF
+import android.media.MediaMetadataRetriever
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.Surface
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsetsController
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.mediapipe.examples.poselandmarker.FrameProcessor
 import com.google.mediapipe.examples.poselandmarker.R
 import com.google.mediapipe.examples.poselandmarker.databinding.FragmentGalleryBinding
+import com.google.mediapipe.examples.poselandmarker.models.LandmarkPosition
 import com.google.mediapipe.framework.image.BitmapImageBuilder
 import com.google.mediapipe.tasks.core.BaseOptions
 import com.google.mediapipe.tasks.vision.core.RunningMode
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
 import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
-import java.util.concurrent.ScheduledExecutorService
-import kotlin.concurrent.thread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 
 /**
  * A simple [Fragment] subclass.
@@ -40,18 +51,17 @@ class GalleryFragment : Fragment() {
     private lateinit var frameProcessor: FrameProcessor
     private lateinit var feedbackTextView: TextView
     private lateinit var repCounterView: TextView
-    private lateinit var fpsCounterView: TextView
+    private lateinit var timestampCounterView: TextView
     private lateinit var poseLandmarker: PoseLandmarker
+    private var videoProcessingJob: Job? = null
     private var strokeCountInt = 0
     private var mostCommonFeedback = "No feedback provided"
-    private lateinit var mediaPlayer: MediaPlayer  // Initialize MediaPlayer here
     private val fragmentGalleryBinding
         get() = _fragmentGalleryBinding!!
 
-    /** Blocking ML operations are performed using this executor */
-    private lateinit var backgroundExecutor: ScheduledExecutorService
     private val getContent =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+            requireView().findViewById<View>(R.id.videoInfo).visibility = View.VISIBLE
             // Handle the returned Uri
             uri?.let { mediaUri ->
                 when (val mediaType = loadMediaType(mediaUri)) {
@@ -68,6 +78,27 @@ class GalleryFragment : Fragment() {
             }
         }
 
+    private val landmarkPairs = listOf(
+        Pair(LandmarkPosition.LEFT_SHOULDER, LandmarkPosition.RIGHT_SHOULDER),
+        Pair(LandmarkPosition.LEFT_SHOULDER, LandmarkPosition.LEFT_HIP),
+        Pair(LandmarkPosition.RIGHT_SHOULDER, LandmarkPosition.RIGHT_HIP),
+        Pair(LandmarkPosition.LEFT_SHOULDER, LandmarkPosition.LEFT_ELBOW),
+        Pair(LandmarkPosition.RIGHT_SHOULDER, LandmarkPosition.RIGHT_ELBOW),
+        Pair(LandmarkPosition.LEFT_ELBOW, LandmarkPosition.LEFT_WRIST),
+        Pair(LandmarkPosition.RIGHT_ELBOW, LandmarkPosition.RIGHT_WRIST),
+        Pair(LandmarkPosition.LEFT_HIP, LandmarkPosition.RIGHT_HIP),
+        Pair(LandmarkPosition.LEFT_HIP, LandmarkPosition.LEFT_KNEE),
+        Pair(LandmarkPosition.RIGHT_HIP, LandmarkPosition.RIGHT_KNEE),
+        Pair(LandmarkPosition.LEFT_KNEE, LandmarkPosition.LEFT_ANKLE),
+        Pair(LandmarkPosition.RIGHT_KNEE, LandmarkPosition.RIGHT_ANKLE),
+        Pair(LandmarkPosition.LEFT_ANKLE, LandmarkPosition.LEFT_HEEL),
+        Pair(LandmarkPosition.RIGHT_ANKLE, LandmarkPosition.RIGHT_HEEL),
+        Pair(LandmarkPosition.LEFT_HEEL, LandmarkPosition.LEFT_FOOT_INDEX),
+        Pair(LandmarkPosition.RIGHT_HEEL, LandmarkPosition.RIGHT_FOOT_INDEX),
+        Pair(LandmarkPosition.LEFT_ANKLE, LandmarkPosition.LEFT_FOOT_INDEX),
+        Pair(LandmarkPosition.RIGHT_ANKLE, LandmarkPosition.RIGHT_FOOT_INDEX)
+    )
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -78,22 +109,34 @@ class GalleryFragment : Fragment() {
         return fragmentGalleryBinding.root
     }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        requireActivity().window.statusBarColor =
+            requireContext().getColor(R.color.status_bar_white)
+        // Next, set the status bar icons to be dark for better contrast:
+        requireActivity().window.insetsController?.setSystemBarsAppearance(
+            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS,
+            WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+        )
         frameProcessor = FrameProcessor()
         feedbackTextView = view.findViewById(R.id.feedbackTextView)
-        repCounterView = view.findViewById(R.id.repsCountTextView)
-        fpsCounterView = view.findViewById(R.id.ipsTextView)
+        repCounterView = view.findViewById(R.id.strokeCountTextView)
+        timestampCounterView = view.findViewById(R.id.timestampTextView)
+
         fragmentGalleryBinding.fabGetContent.setOnClickListener {
             getContent.launch(arrayOf("image/*", "video/*"))
         }
         loadModelInBackground()
         fragmentGalleryBinding.stopButton.setOnClickListener {
+            videoProcessingJob?.cancel()
             val bundle = Bundle()
             bundle.putInt("strokeCount", strokeCountInt)
             bundle.putInt("correctStrokePercentage", frameProcessor.getCorrectStrokePercentage())
             bundle.putString("mostCommonFeedback", mostCommonFeedback)
-            findNavController().navigate(R.id.action_galleryFragment_to_summaryFragment, bundle)
+            if (isAdded) {
+                findNavController().navigate(R.id.action_galleryFragment_to_summaryFragment, bundle)
+            }
         }
         frameProcessor.addFeedbackListener { output ->
             activity?.runOnUiThread {
@@ -115,9 +158,6 @@ class GalleryFragment : Fragment() {
                 mostCommonFeedback = feedback
             }
         }
-        // Instantiate MediaPlayer here
-        mediaPlayer = MediaPlayer()
-        mediaPlayer.isLooping = false
     }
 
     private fun loadModelInBackground() {
@@ -139,73 +179,165 @@ class GalleryFragment : Fragment() {
     }
 
     private fun runDetectionOnVideo(uri: Uri) {
-        // Play video on a texture view
-        var startTimeMillis: Long
-        mediaPlayer.setDataSource(requireContext(), uri)
-        mediaPlayer.prepareAsync()
-        mediaPlayer.setOnPreparedListener {
-            val surface = Surface(fragmentGalleryBinding.textureView.surfaceTexture)
-            mediaPlayer.setSurface(surface)
-            mediaPlayer.start()
-            startTimeMillis = System.currentTimeMillis() // Record the start time
-            // Add a flag to indicate whether the video is playing
-            var isVideoPlaying = true
-            // 2 different timestamps variable used to prevent error received frame with timestamp smaller
-            // than timestamp in processed video frame from MediaPipe
-            var timestamp: Long
-            var frameNumber = 0L
-            // Set a listener to update the flag when the video is completed
-            mediaPlayer.setOnCompletionListener {
-                isVideoPlaying = false
+        updateDisplayView(MediaType.VIDEO)
+        //parallel processing
+        videoProcessingJob = MainScope().launch {
+            detectVideoFile(uri)
+        }
+    }
+
+    // Accepts the URI for a video file loaded from the user's gallery and attempts to run
+    // pose landmarker inference on the video. This process will evaluate every
+    // frame in the video and attach the results to a bundle that will be returned.
+    private suspend fun detectVideoFile(videoUri: Uri) {
+        val retriever = MediaMetadataRetriever()
+        retriever.setDataSource(context, videoUri)
+        val videoLengthMs =
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLong()
+        val firstFrame = retriever.getFrameAtTime(0)
+        val width = firstFrame?.width
+        val height = firstFrame?.height
+        if ((videoLengthMs == null) || (width == null) || (height == null)) {
+            Log.e("VideoProcessing", "Failed to retrieve video metadata")
+            return
+        }
+        // Get the actual number of frames in the video
+        val actualNumberOfFrames =
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_FRAME_COUNT)
+                ?.toLong()
+        // Set visibility and max value of progress bar
+        fragmentGalleryBinding.progressBar.visibility = View.VISIBLE
+        if (actualNumberOfFrames != null) {
+            // update VIDEO_INTERVAL_MS
+            updateVideoIntervalMs(videoLengthMs, actualNumberOfFrames)
+            fragmentGalleryBinding.progressBar.max = actualNumberOfFrames.toInt()
+        }
+
+        (0 until actualNumberOfFrames!!)
+            .forEach {
+                processFrame(it, retriever)
+                // Update the progress bar every 10 frames
+                if (it % 10 == 0.toLong()) {
+                    fragmentGalleryBinding.progressBar.progress = it.toInt()
+                }
             }
-            // Start a new thread to run pose landmarker on the video
-            // This will take read the current frame from the video and run pose landmarker on it,
-            // in an endless loop.
-            thread {
-                var previousBitmap: Bitmap? = null
-                while (isVideoPlaying && ::poseLandmarker.isInitialized) {
-                    // val frame = fragmentGalleryBinding.textureView.bitmap ?: continue
-                    val frame = fragmentGalleryBinding.textureView.bitmap
-                    if (frame != null) {
-                        // Convert the video frame to ARGB_8888 which is required by the MediaPipe
-                        val argb8888Frame =
-                            if (frame.config == Bitmap.Config.ARGB_8888) frame
-                            else frame.copy(Bitmap.Config.ARGB_8888, false)
-                        previousBitmap?.recycle()
-                        previousBitmap = argb8888Frame
-                        // Convert the input Bitmap object to an MPImage object to run inference
-                        val mpImage = BitmapImageBuilder(argb8888Frame).build()
-                        frameNumber++
-                        timestamp = if (isVideoPlaying) mediaPlayer.currentPosition.toLong() else 0L
-                        val elapsedTimeSeconds =
-                            (System.currentTimeMillis() - startTimeMillis) / 1000.0
-                        val fps = frameNumber / elapsedTimeSeconds
-                        activity?.runOnUiThread {
-                            fpsCounterView.text = String.format("FPS: %d", fps.toInt())
-                        }
-                        // Run pose landmarker using MediaPipe Pose Landmarker API with frameNumber as timestamp
-                        poseLandmarker.detectForVideo(mpImage, frameNumber)
-                            ?.let { detectionResult: PoseLandmarkerResult ->
-                                frameProcessor.process(
-                                    timestamp,// real timestamp from video frame
-                                    detectionResult.landmarks()
-                                )
-                            } ?: {
-                            error("ResultBundle could not be returned" + " in detectVideoFile")
-                        }
-                    } else {
-                        // Log a message or perform some other action
-                        Log.d("VideoProcessing", "No new frame to process")
-                        break
+
+        val bundle = Bundle()
+        bundle.putInt("strokeCount", strokeCountInt)
+        bundle.putInt("correctStrokePercentage", frameProcessor.getCorrectStrokePercentage())
+        bundle.putString("mostCommonFeedback", mostCommonFeedback)
+        fragmentGalleryBinding.progressBar.visibility = View.INVISIBLE
+        if (isAdded) {
+            findNavController().navigate(R.id.action_galleryFragment_to_summaryFragment, bundle)
+        }
+        retriever.release()
+    }
+
+    private suspend fun processFrame(it: Long, retriever: MediaMetadataRetriever) =
+        withContext(Dispatchers.Default) {
+            val timestampMs = it * VIDEO_INTERVAL_MS
+            try {
+                activity?.runOnUiThread {
+                    if (isAdded) {
+                        timestampCounterView.text =
+                            getString(R.string.label_timestamp, timestampMs / 1000)
                     }
                 }
-                previousBitmap?.recycle()
-                if (::poseLandmarker.isInitialized) {
-                    poseLandmarker.close()
+                val bitmapFrame: Bitmap =
+                    retriever.getFrameAtIndex(it.toInt()) ?: return@withContext
+                val resizedBitmap = resizeBitmap(
+                    bitmapFrame,
+                    fragmentGalleryBinding.textureView.width,
+                    bitmapFrame.height * fragmentGalleryBinding.textureView.width / bitmapFrame.width
+                )
+
+                val mpImage = BitmapImageBuilder(resizedBitmap).build()
+                poseLandmarker.detectForVideo(mpImage, timestampMs)
+                    ?.let { detectionResult: PoseLandmarkerResult ->
+                        frameProcessor.process(timestampMs, detectionResult.landmarks())
+                        // Convert PoseLandmarkerResult landmarks to a list of PointF
+                        val points = getLandmarkPoints(detectionResult)
+                        val connections = landmarkPairs.mapNotNull { (start, end) ->
+                            val startPoint = points.getOrNull(start.ordinal)
+                            val endPoint = points.getOrNull(end.ordinal)
+                            if (startPoint != null && endPoint != null) {
+                                Pair(startPoint, endPoint)
+                            } else {
+                                null
+                            }
+                        }
+                        // Create a bitmap with the pose drawn on it
+                        val poseBitmap = drawPoseOnBitmap(resizedBitmap, points, connections)
+                        // Update the UI with the new bitmap
+                        activity?.runOnUiThread {
+                            val canvas = fragmentGalleryBinding.textureView.lockCanvas()
+                            if (canvas != null) {
+                                canvas.drawBitmap(poseBitmap, 0f, 0f, null)
+                                fragmentGalleryBinding.textureView.unlockCanvasAndPost(canvas)
+                            } else {
+                                Log.e("GalleryFragment", "Canvas is null or has unexpected size.")
+                            }
+                            // Update timestamp text view
+                            timestampCounterView.text =
+                                getString(R.string.label_timestamp, timestampMs / 1000)
+                        }
+                    } ?: run {
+                    Log.e("VideoProcessing", "Failed to process frame $it")
                 }
-                mediaPlayer.release()
+            } catch (e: IllegalStateException) {
+                Log.e("VideoProcessing", "Failed to retrieve frame at index: $it", e)
             }
         }
+
+    private fun resizeBitmap(bitmap: Bitmap, width: Int, height: Int): Bitmap {
+        return Bitmap.createScaledBitmap(bitmap, width, height, false)
+    }
+
+    private fun getLandmarkPoints(detectionResult: PoseLandmarkerResult): List<PointF> {
+        // Assuming only interested in the first pose detected.
+        val landmarks = detectionResult.landmarks().firstOrNull() ?: return emptyList()
+        // Convert the NormalizedLandmark list into PointF list
+        return landmarks.map { landmark ->
+            PointF(landmark.x(), landmark.y()) // x and y are normalized coordinates
+        }
+    }
+
+    private fun drawPoseOnBitmap(
+        bitmap: Bitmap,
+        points: List<PointF>,
+        connections: List<Pair<PointF, PointF>>
+    ): Bitmap {
+        val offscreenBitmap =
+            Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val offscreenCanvas = Canvas(offscreenBitmap)
+        offscreenCanvas.drawBitmap(bitmap, 0f, 0f, null)
+
+        val pointPaint = Paint().apply {
+            color = Color.BLUE
+            style = Paint.Style.FILL
+            strokeWidth = 10f
+        }
+        val linePaint = Paint().apply {
+            color = Color.RED
+            style = Paint.Style.STROKE
+            strokeWidth = 8f
+        }
+        // Draw lines between points
+        connections.forEach { (start, end) ->
+            val scaledStartX = start.x * bitmap.width
+            val scaledStartY = start.y * bitmap.height
+            val scaledEndX = end.x * bitmap.width
+            val scaledEndY = end.y * bitmap.height
+            offscreenCanvas.drawLine(scaledStartX, scaledStartY, scaledEndX, scaledEndY, linePaint)
+        }
+        // Draw points
+        points.forEach { point ->
+            val scaledX = point.x * bitmap.width
+            val scaledY = point.y * bitmap.height
+            offscreenCanvas.drawCircle(scaledX, scaledY, 10f, pointPaint)
+        }
+        return offscreenBitmap
     }
 
     private fun updateDisplayView(mediaType: MediaType) {
@@ -215,7 +347,6 @@ class GalleryFragment : Fragment() {
             if (mediaType == MediaType.UNKNOWN) View.VISIBLE else View.GONE
     }
 
-    // Check the type of media that user selected.
     private fun loadMediaType(uri: Uri): MediaType {
         val mimeType = context?.contentResolver?.getType(uri)
         mimeType?.let {
@@ -224,13 +355,12 @@ class GalleryFragment : Fragment() {
         return MediaType.UNKNOWN
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // Release the MediaPlayer when it's no longer needed
-        mediaPlayer.release()
-    }
-
     companion object {
         fun newInstance() = GalleryFragment()
+        private var VIDEO_INTERVAL_MS = 1000 / 33L
+        fun updateVideoIntervalMs(videoLengthMs: Long, actualNumberOfFrames: Long) {
+            VIDEO_INTERVAL_MS = videoLengthMs / actualNumberOfFrames
+        }
+
     }
 }
